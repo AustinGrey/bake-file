@@ -8,8 +8,10 @@
 
   <pre>{{ fileContents }}</pre>
 
+  <button type="button" v-if="fileDirty" @click="saveFile">Save Changes</button>
+
   <h1>Name</h1>
-  <name />
+  <name v-model="fileContents.name" @keydown="fileDirty = true" />
 
   <h1>Alters</h1>
   <alters />
@@ -65,7 +67,10 @@ interface FileSystemFileHandle {
   name: string;
   kind: "file";
   getFile: () => Promise<File>;
-  createWriteable: () => Promise<{ write: (...args: any[]) => {} }>;
+  createWritable: () => Promise<{
+    write: (...args: any[]) => {};
+    close: () => void;
+  }>;
 }
 interface FileSystemDirectoryHandle {
   name: string;
@@ -73,13 +78,18 @@ interface FileSystemDirectoryHandle {
 }
 type FileSystemHandle = FileSystemFileHandle | FileSystemDirectoryHandle;
 
+interface BakeFile {
+  name?: string;
+  error?: string;
+}
+
 const directory = ref(
   undefined as undefined | { values: () => Iterable<FileSystemHandle> }
 );
 
 async function onChooseClick() {
   directory.value = await (window as any).showDirectoryPicker({
-    startIn: "desktop",
+    startIn: "documents",
   });
 }
 
@@ -90,6 +100,7 @@ async function onDirTreeClick(handle: FileSystemHandle) {
   if (handle.kind === "directory") {
     // do nothing @todo change current working directory
   } else {
+    currentHandle.value = handle;
     currentFile.value = await handle.getFile();
   }
 }
@@ -103,24 +114,42 @@ const handles = ref([] as FileSystemHandle[]);
  * The user's currently chosen file handle they wish to edit
  */
 const currentFile = ref(undefined as undefined | File);
+const currentHandle = ref(undefined as undefined | FileSystemFileHandle);
 
 /**
  * The JSON object from the currentFile
  */
-const fileContents = ref(undefined as undefined | Record<string, unknown>);
+const fileContents = ref({} as BakeFile);
+
+/**
+ * True if the user has made changes to the file contents that are not saved yet
+ */
+const fileDirty = ref(false);
+
+async function saveFile() {
+  const writable = await currentHandle.value?.createWritable();
+  await writable?.write(fileContents.value);
+  await writable?.close();
+  fileDirty.value = false;
+}
 
 watch(currentFile, async (newFile) => {
   const errorUnparsable =
     "File cannot be parsed. Did you select a '*.bakefile.yaml' ?";
   const contents = await newFile?.text();
-  console.log(contents);
-  try {
-    fileContents.value = JSON.parse(
-      contents ?? `{'error': '${errorUnparsable}'}`
-    );
-  } catch (e) {
-    fileContents.value = { error: errorUnparsable };
+  if (contents === "") {
+    fileContents.value = {};
+  } else {
+    try {
+      fileContents.value = JSON.parse(
+        contents ?? `{'error': '${errorUnparsable}'}`
+      );
+    } catch (e) {
+      fileContents.value = { error: errorUnparsable };
+    }
   }
+  // With a freshly loaded file, we know the file contents are not dirty
+  fileDirty.value = false;
 });
 
 watch(directory, async (newVal) => {
