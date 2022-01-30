@@ -1,5 +1,10 @@
 <template>
   Bake File Editor
+  <button @click="onChooseClick">Choose</button>
+
+  <div v-for="file in files">
+    {{ file.name }}
+  </div>
 
   <h1>Name</h1>
   <name />
@@ -43,6 +48,28 @@ import Tools from "./components/editors/tools.vue";
 import Units from "./components/editors/units.vue";
 import Yield from "./components/editors/yield.vue";
 import Card from "./components/views/card.vue";
+import { computed, onMounted, ref, watch } from "vue";
+
+type FileSystemHandle = { name: string; kind: "file" | "directory" };
+
+const directory = ref(
+  undefined as undefined | { values: () => Iterable<FileSystemHandle> }
+);
+
+async function onChooseClick() {
+  directory.value = await (window as any).showDirectoryPicker({
+    startIn: "desktop",
+  });
+}
+
+const files = ref([] as FileSystemHandle[]);
+
+watch(directory, async (newVal) => {
+  files.value.splice(0, files.value.length);
+  for await (const entry of newVal?.values() ?? []) {
+    files.value.push(entry);
+  }
+});
 </script>
 
 <style lang="scss"></style>
