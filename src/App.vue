@@ -2,9 +2,11 @@
   Bake File Editor
   <button @click="onChooseClick">Choose</button>
 
-  <div v-for="file in files">
-    {{ file.name }}
-  </div>
+  <button v-for="handle in handles" @click="onDirTreeClick(handle)">
+    {{ handle.name }}
+  </button>
+
+  <pre>{{ fileContents }}</pre>
 
   <h1>Name</h1>
   <name />
@@ -50,7 +52,26 @@ import Yield from "./components/editors/yield.vue";
 import Card from "./components/views/card.vue";
 import { computed, onMounted, ref, watch } from "vue";
 
-type FileSystemHandle = { name: string; kind: "file" | "directory" };
+/**
+ * This component is responsible for
+ * - Letting the user choose a file to work on
+ * - Parsing the file into the segments that can be controlled by the individual editors
+ * - Binding the segments to the editors so that when the edits happen, the result can
+ *  be written out to the chosen file
+ */
+
+// Get the directory to choose files from
+interface FileSystemFileHandle {
+  name: string;
+  kind: "file";
+  getFile: () => Promise<File>;
+  createWriteable: () => Promise<{ write: (...args: any[]) => {} }>;
+}
+interface FileSystemDirectoryHandle {
+  name: string;
+  kind: "directory";
+}
+type FileSystemHandle = FileSystemFileHandle | FileSystemDirectoryHandle;
 
 const directory = ref(
   undefined as undefined | { values: () => Iterable<FileSystemHandle> }
@@ -62,12 +83,50 @@ async function onChooseClick() {
   });
 }
 
-const files = ref([] as FileSystemHandle[]);
+/**
+ * Called when a handle shown in the directory tree is picked
+ */
+async function onDirTreeClick(handle: FileSystemHandle) {
+  if (handle.kind === "directory") {
+    // do nothing @todo change current working directory
+  } else {
+    currentFile.value = await handle.getFile();
+  }
+}
+
+/**
+ * The current known set of file handles we can edit
+ */
+const handles = ref([] as FileSystemHandle[]);
+
+/**
+ * The user's currently chosen file handle they wish to edit
+ */
+const currentFile = ref(undefined as undefined | File);
+
+/**
+ * The JSON object from the currentFile
+ */
+const fileContents = ref(undefined as undefined | Record<string, unknown>);
+
+watch(currentFile, async (newFile) => {
+  const errorUnparsable =
+    "File cannot be parsed. Did you select a '*.bakefile.yaml' ?";
+  const contents = await newFile?.text();
+  console.log(contents);
+  try {
+    fileContents.value = JSON.parse(
+      contents ?? `{'error': '${errorUnparsable}'}`
+    );
+  } catch (e) {
+    fileContents.value = { error: errorUnparsable };
+  }
+});
 
 watch(directory, async (newVal) => {
-  files.value.splice(0, files.value.length);
+  handles.value.splice(0, handles.value.length);
   for await (const entry of newVal?.values() ?? []) {
-    files.value.push(entry);
+    handles.value.push(entry);
   }
 });
 </script>
