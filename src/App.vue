@@ -1,17 +1,9 @@
 <template>
   Bake File Editor
-  <button @click="onChooseClick">Choose</button>
-
-  <button v-for="handle in handles" @click="onDirTreeClick(handle)">
-    {{ handle.name }}
-  </button>
-
-  <pre>{{ fileContents }}</pre>
-
-  <button type="button" v-if="fileDirty" @click="saveFile">Save Changes</button>
+  <bakefile-loader v-model="bakefile" />
 
   <h1>Name</h1>
-  <name v-model="fileContents.name" @keydown="fileDirty = true" />
+  <name v-model="bakefile.name" />
 
   <h1>Alters</h1>
   <alters />
@@ -52,7 +44,9 @@ import Tools from "./components/editors/tools.vue";
 import Units from "./components/editors/units.vue";
 import Yield from "./components/editors/yield.vue";
 import Card from "./components/views/card.vue";
-import { computed, onMounted, ref, watch } from "vue";
+import BakefileLoader from "./components/bakefile-loader.vue";
+import { Bakefile } from "./bakefile";
+import { ref } from "vue";
 
 /**
  * This component is responsible for
@@ -61,103 +55,7 @@ import { computed, onMounted, ref, watch } from "vue";
  * - Binding the segments to the editors so that when the edits happen, the result can
  *  be written out to the chosen file
  */
-
-// Get the directory to choose files from
-interface FileSystemFileHandle {
-  name: string;
-  kind: "file";
-  getFile: () => Promise<File>;
-  createWritable: () => Promise<{
-    write: (...args: any[]) => {};
-    close: () => void;
-  }>;
-}
-interface FileSystemDirectoryHandle {
-  name: string;
-  kind: "directory";
-}
-type FileSystemHandle = FileSystemFileHandle | FileSystemDirectoryHandle;
-
-interface BakeFile {
-  name?: string;
-  error?: string;
-}
-
-const directory = ref(
-  undefined as undefined | { values: () => Iterable<FileSystemHandle> }
-);
-
-async function onChooseClick() {
-  directory.value = await (window as any).showDirectoryPicker({
-    startIn: "documents",
-  });
-}
-
-/**
- * Called when a handle shown in the directory tree is picked
- */
-async function onDirTreeClick(handle: FileSystemHandle) {
-  if (handle.kind === "directory") {
-    // do nothing @todo change current working directory
-  } else {
-    currentHandle.value = handle;
-    currentFile.value = await handle.getFile();
-  }
-}
-
-/**
- * The current known set of file handles we can edit
- */
-const handles = ref([] as FileSystemHandle[]);
-
-/**
- * The user's currently chosen file handle they wish to edit
- */
-const currentFile = ref(undefined as undefined | File);
-const currentHandle = ref(undefined as undefined | FileSystemFileHandle);
-
-/**
- * The JSON object from the currentFile
- */
-const fileContents = ref({} as BakeFile);
-
-/**
- * True if the user has made changes to the file contents that are not saved yet
- */
-const fileDirty = ref(false);
-
-async function saveFile() {
-  const writable = await currentHandle.value?.createWritable();
-  await writable?.write(JSON.stringify(fileContents.value));
-  await writable?.close();
-  fileDirty.value = false;
-}
-
-watch(currentFile, async (newFile) => {
-  const errorUnparsable =
-    "File cannot be parsed. Did you select a '*.bakefile.yaml' ?";
-  const contents = await newFile?.text();
-  if (contents === "") {
-    fileContents.value = {};
-  } else {
-    try {
-      fileContents.value = JSON.parse(
-        contents ?? `{'error': '${errorUnparsable}'}`
-      );
-    } catch (e) {
-      fileContents.value = { error: errorUnparsable };
-    }
-  }
-  // With a freshly loaded file, we know the file contents are not dirty
-  fileDirty.value = false;
-});
-
-watch(directory, async (newVal) => {
-  handles.value.splice(0, handles.value.length);
-  for await (const entry of newVal?.values() ?? []) {
-    handles.value.push(entry);
-  }
-});
+const bakefile = ref({} as Bakefile);
 </script>
 
 <style lang="scss"></style>
