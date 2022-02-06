@@ -56,6 +56,19 @@ type MetricAmount = `${number}${"" | " "}${
   | "I.U."}`;
 
 /**
+ * @param s The string to test if it defines a metric amount
+ * @returns True if the string is a metric amount string, false otherwise
+ */
+export function isMetricAmount(s: unknown): s is MetricAmount {
+  return (
+    typeof s === "string" &&
+    /^[0-9]+(\.[0-9]+)? ?(((y|z|a|f|p|n|μ|m|c|d|da|h|k|M|G|T|P|E|Z|Y)(g|l))|(IU|I.U.))$/.test(
+      s
+    )
+  );
+}
+
+/**
  * A string that specifies an amount in non-metric units.
  * There is an optional space between the value and the unit.
  * E.g. `2 oz`
@@ -70,7 +83,7 @@ type NonMetricAmount = `${number}${"" | " "}${string}`;
  * E.g. "1oz = 25g"
  * E.g. ["1oz", "25g"]
  */
-type CustomUnitDefinition =
+export type CustomUnitDefinition =
   | string
   | `${NonMetricAmount} = ${MetricAmount}`
   | [NonMetricAmount, MetricAmount];
