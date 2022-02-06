@@ -128,7 +128,7 @@ const fileDirty = ref(false);
 
 async function saveFile() {
   const writable = await currentHandle.value?.createWritable();
-  await writable?.write(fileContents.value);
+  await writable?.write(JSON.stringify(fileContents.value));
   await writable?.close();
   fileDirty.value = false;
 }
