@@ -14,7 +14,7 @@ const props = defineProps({
 const modelValue = computed({
   get: () => props.modelValue,
   set: (val) => {
-    emit("update:modelValue", val);
+    emit("update:modelValue", val === "" ? undefined : val);
   },
 });
 
