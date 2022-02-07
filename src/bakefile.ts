@@ -75,6 +75,19 @@ export function isMetricAmount(s: unknown): s is MetricAmount {
  * E.g. `14cup`
  */
 type NonMetricAmount = `${number}${"" | " "}${string}`;
+
+/**
+ * @param s The value to test if it is a non-metric amount string 
+ * @returns True if the value is a non-metric amount string, false otherwise
+ */
+export function isNonMetricAmount(s: unknown): s is NonMetricAmount {
+  return (
+    typeof s === "string" &&
+    /^[0-9]+(\.[0-9]+)? ?(.*)$/.test(s) &&
+    !isMetricAmount(s)
+  );
+}
+
 /**
  * Defines how a custom unit would be defined, either as a
  * direct relation to a metric unit or as a standalone, uncomparable

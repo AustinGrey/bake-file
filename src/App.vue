@@ -21,7 +21,7 @@
   <tools />
 
   <h1>Units</h1>
-  <units />
+  <units v-model="bakefile.units" />
 
   <h1>Yield</h1>
   <yield />
