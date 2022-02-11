@@ -1,13 +1,9 @@
 <template>
   <p>Parent state</p>
-  {{ state }}
+  {{ state.bakefile.units }}
 
   <p>Child Component with bound state</p>
-  <units
-    v-model="state.bakefile.units"
-    @implicit-deep="state.implicitDeepUpdates += 1"
-    @explicit-deep="state.explicitDeepUpdates += 1"
-  />
+  <units v-model="state.bakefile.units" />
 </template>
 
 <script setup lang="ts">
@@ -17,7 +13,5 @@ import { Bakefile } from "./bakefile";
 
 const state = reactive({
   bakefile: {} as Bakefile,
-  implicitDeepUpdates: 0,
-  explicitDeepUpdates: 0,
 });
 </script>

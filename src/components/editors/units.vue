@@ -140,7 +140,7 @@ watch(
  * Exports the IR to the model value
  */
 watch(
-  () => state.units,
+  state.units,
   (newValue) => {
     // Construct and validate a CustomUnitDefinition[]
     const errors = [] as string[];
@@ -174,16 +174,16 @@ watch(
     if (errors.length) {
       return;
     }
-    emit("implicit-deep");
+    // emit("implicit-deep");
     emit("update:modelValue", toEmit);
-  },
-  { deep: true }
+  }
+  // { deep: true }
 );
 
-/**
- * Exports the IR to the model value
- */
-watch(state.units, (newValue) => {
-  emit("explicit-deep");
-});
+// /**
+//  * Exports the IR to the model value
+//  */
+// watch(state.units, (newValue) => {
+//   emit("explicit-deep");
+// });
 </script>
