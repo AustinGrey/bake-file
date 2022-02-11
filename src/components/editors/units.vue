@@ -2,14 +2,11 @@
   {{ state.units }}
   <ul>
     <li v-for="(unitDef, idx) of state.units">
-      <span class="unit-input">
-        <input v-model="state.units[idx].custom" />
-        <template v-if="state.units[idx].type !== 'incomparable'">
-          <span>=</span>
-          <input v-model="state.units[idx].metric" />
-        </template>
-      </span>
-      <button type="button" @click="convertType(idx)">Change Type</button>
+      <input v-model="state.units[idx].custom" />
+      <template v-if="state.units[idx].type !== 'incomparable'">
+        <span>=</span>
+        <input v-model="state.units[idx].metric" />
+      </template>
     </li>
     <li>
       <button
@@ -119,6 +116,8 @@ const normalizedModelValue = computed<CustomUnitIr[]>(() => {
 
 const emit = defineEmits<{
   (e: "update:modelValue", newVal: Bakefile["units"]): void;
+  (e: "implicit-deep"): void;
+  (e: "explicit-deep"): void;
 }>();
 
 const state = reactive({
@@ -132,13 +131,7 @@ const state = reactive({
 watch(
   normalizedModelValue,
   (newValue) => {
-    // Load the normalized value into the state
-    console.log("Imported!");
-    // Re-assigning the value can cause reactivity to be lost here if the export
-    // watcher is an implicit deep, but not if it's an explicit deep.
     state.units = newValue;
-    // state.units.splice(0);
-    // newValue.forEach((entry) => state.units.push(entry));
   },
   { immediate: true }
 );
@@ -181,36 +174,16 @@ watch(
     if (errors.length) {
       return;
     }
+    emit("implicit-deep");
     emit("update:modelValue", toEmit);
   },
   { deep: true }
 );
 
 /**
- * Converts a unit definition from one type to the next, cycling through the list
- * 1. incomparable == Bare string
- * 2. comparable-string == Amount compared to metric amount in string form
- * 3. comparable-array == Amount compared to metric amount in Array form
- *
- * @param idx the index of the modelAsList array to be converted
+ * Exports the IR to the model value
  */
-function convertType(idx: number) {
-  const currentType = state.units[idx].type;
-  state.units[idx].type =
-    currentType === "incomparable"
-      ? "comparable-string"
-      : currentType === "comparable-string"
-      ? "comparable-array"
-      : "incomparable";
-}
+watch(state.units, (newValue) => {
+  emit("explicit-deep");
+});
 </script>
-
-<style scoped lang="scss">
-.unit-input {
-  display: inline-flex;
-  width: 11em;
-  > *:not(span) {
-    flex: 1;
-  }
-}
-</style>
