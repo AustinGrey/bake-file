@@ -10,6 +10,7 @@
         </template>
       </span>
       <button type="button" @click="convertType(idx)">Change Type</button>
+      <button type="button" @click="state.units.splice(idx, 1)">Remove</button>
     </li>
     <li>
       <button
@@ -131,9 +132,11 @@ const state = reactive({
  */
 watch(
   normalizedModelValue,
-  (newValue) => {
+  (newValue, oldValue) => {
+    // Because we have circular reactivity from the prop to the state.units, we need to
+    // be careful to only re-import if the state has actually changed
+    if (JSON.stringify(newValue) === JSON.stringify(oldValue)) return;
     // Load the normalized value into the state
-    console.log("Imported!");
     // Re-assigning the value can cause reactivity to be lost here if the export
     // watcher is an implicit deep, but not if it's an explicit deep.
     state.units = newValue;
@@ -181,7 +184,10 @@ watch(
     if (errors.length) {
       return;
     }
-    emit("update:modelValue", toEmit);
+    emit(
+      "update:modelValue",
+      toEmit.length === 0 ? undefined : toEmit.length === 1 ? toEmit[0] : toEmit
+    );
   },
   { deep: true }
 );
