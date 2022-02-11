@@ -2,29 +2,31 @@
 
 /**
  * The allowed prefixes for metric units
+ * @todo uncomment the more esoteric amounts once ready, as it's easier to
+ *   debug types when you don't have a type expansion explosion
  */
 type MetricUnitPrefix =
-  | "y" // e-24
-  | "z" // e-21
-  | "a" // e-18
-  | "f" // e-15
-  | "p" // e-12
-  | "n" // e-9
-  | "μ" // e-6
+  // | "y" // e-24
+  // | "z" // e-21
+  // | "a" // e-18
+  // | "f" // e-15
+  // | "p" // e-12
+  // | "n" // e-9
+  // | "μ" // e-6
   | "m" // e-3
-  | "c" // e-2
-  | "d" // e-1
+  // | "c" // e-2
+  // | "d" // e-1
   | "" // e0
-  | "da" // e1
-  | "h" // e2
-  | "k" // e3
-  | "M" // e6
-  | "G" // e9
-  | "T" // e12
-  | "P" // e15
-  | "E" // e18
-  | "Z" // e21
-  | "Y"; // e24
+  // | "da" // e1
+  // | "h" // e2
+  | "k"; // e3
+// | "M" // e6
+// | "G" // e9
+// | "T" // e12
+// | "P" // e15
+// | "E" // e18
+// | "Z" // e21
+// | "Y" // e24
 
 /**
  * String for a metric unit that measures mass
@@ -48,12 +50,15 @@ type MetricVolumeUnit = `${MetricUnitPrefix}l`;
  *
  * E.g. '1 ml'
  * E.g. '47g'
+ *
+ * @todo uncomment IU options when ready, as it's easier to debug types
+ * without them at this time
  */
-type MetricAmount = `${number}${"" | " "}${
-  | MetricVolumeUnit
-  | MetricMassUnit
-  | "IU"
-  | "I.U."}`;
+export type MetricAmount = `${number}${"" | " "}${
+  MetricVolumeUnit | MetricMassUnit
+  // | "IU"
+  // | "I.U."
+}`;
 
 /**
  * @param s The string to test if it defines a metric amount
@@ -62,7 +67,7 @@ type MetricAmount = `${number}${"" | " "}${
 export function isMetricAmount(s: unknown): s is MetricAmount {
   return (
     typeof s === "string" &&
-    /^[0-9]+(\.[0-9]+)? ?(((y|z|a|f|p|n|μ|m|c|d|da|h|k|M|G|T|P|E|Z|Y)(g|l))|(IU|I.U.))$/.test(
+    /^[0-9]+(\.[0-9]+)? ?(((y|z|a|f|p|n|μ|m|c|d|da|h|k|M|G|T|P|E|Z|Y)?(g|l))|(IU|I.U.))$/.test(
       s
     )
   );
@@ -74,10 +79,10 @@ export function isMetricAmount(s: unknown): s is MetricAmount {
  * E.g. `2 oz`
  * E.g. `14cup`
  */
-type NonMetricAmount = `${number}${"" | " "}${string}`;
+export type NonMetricAmount = `${number}${"" | " "}${string}`;
 
 /**
- * @param s The value to test if it is a non-metric amount string 
+ * @param s The value to test if it is a non-metric amount string
  * @returns True if the value is a non-metric amount string, false otherwise
  */
 export function isNonMetricAmount(s: unknown): s is NonMetricAmount {
