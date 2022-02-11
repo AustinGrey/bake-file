@@ -1,16 +1,18 @@
 <template>
-  {{ state.units }}
   <ul>
     <li v-for="(unitDef, idx) of state.units">
       <span class="unit-input">
-        <input v-model="state.units[idx].custom" />
+        <input v-model="state.units[idx].custom" class="custom-unit" />
         <template v-if="state.units[idx].type !== 'incomparable'">
           <span>=</span>
-          <input v-model="state.units[idx].metric" />
+          <input v-model="state.units[idx].metric" class="metric-unit" />
         </template>
       </span>
       <button type="button" @click="convertType(idx)">Change Type</button>
       <button type="button" @click="state.units.splice(idx, 1)">Remove</button>
+      <ul v-if="state.validationErrors.find((e) => e.idx === idx)">
+        <li>{{ state.validationErrors.find((e) => e.idx === idx)?.error }}</li>
+      </ul>
     </li>
     <li>
       <button
@@ -21,7 +23,7 @@
       </button>
     </li>
   </ul>
-  <span v-if="state.validationErrors.length">{{ state.validationErrors }}</span>
+  <!-- <span v-if="state.validationErrors.length">{{ state.validationErrors }}</span> -->
 </template>
 
 <script setup lang="ts">
@@ -125,7 +127,7 @@ const emit = defineEmits<{
 
 const state = reactive({
   units: [] as CustomUnitIr[],
-  validationErrors: [] as string[],
+  validationErrors: [] as { idx: number; error: string }[],
 });
 
 /**
@@ -155,29 +157,35 @@ watch(
  */
 watch(state.units, (newValue) => {
   // Construct and validate a CustomUnitDefinition[]
-  const errors = [] as string[];
-  const toEmit = state.units.map<CustomUnitDefinition>((ir) => {
+  const errors = [] as typeof state.validationErrors;
+  const toEmit = state.units.map<CustomUnitDefinition>((ir, idx) => {
     if (ir.type === "incomparable") return ir.custom;
 
     // Validate, comparable types need valid comparable amount string
     if (!isNonMetricAmount(ir.custom)) {
-      errors.push(
-        `You specified a custom unit '${ir.custom}', but it doesn't look like a number followed by a string.`
-      );
+      errors.push({
+        idx,
+        error: `You specified a custom unit '${ir.custom}', but it doesn't look like a number followed by a string.`,
+      });
       return "INVALID";
     }
     if (!isMetricAmount(ir.metric)) {
-      errors.push(
-        `You specified a metric unit '${ir.metric}', but it doesn't look like a number followed by a string.`
-      );
+      errors.push({
+        idx,
+
+        error: `You specified a metric unit '${ir.metric}', but it doesn't look like a number followed by a string.`,
+      });
       return "INVALID";
     }
 
     if (ir.type === "comparable-string") return `${ir.custom} = ${ir.metric}`;
     if (ir.type === "comparable-array") return [ir.custom, ir.metric];
-    errors.push(
-      "Something doesn't look right with the custom unit: " + JSON.stringify(ir)
-    );
+    errors.push({
+      idx,
+      error:
+        "Something doesn't look right with the custom unit: " +
+        JSON.stringify(ir),
+    });
     return "INVALID";
   });
   // Do nothing if validation failed
@@ -229,8 +237,9 @@ function convertType(idx: number) {
 .unit-input {
   display: inline-flex;
   width: 11em;
-  > *:not(span) {
-    flex: 1;
-  }
+}
+.custom-unit,
+.metric-unit {
+  flex: 1;
 }
 </style>
