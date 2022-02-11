@@ -21,6 +21,7 @@
       </button>
     </li>
   </ul>
+  <span v-if="state.validationErrors.length">{{ state.validationErrors }}</span>
 </template>
 
 <script setup lang="ts">
@@ -137,11 +138,14 @@ watch(
     // be careful to only re-import if the state has actually changed
     if (JSON.stringify(newValue) === JSON.stringify(oldValue)) return;
     // Load the normalized value into the state
-    // Re-assigning the value can cause reactivity to be lost here if the export
-    // watcher is an implicit deep, but not if it's an explicit deep.
-    state.units = newValue;
-    // state.units.splice(0);
-    // newValue.forEach((entry) => state.units.push(entry));
+    // We don't want to re-assign since that would break implicit deep watchers,
+    // and we want to remember 'extraneous' state like the last entered metric value
+    // for items that are currently 'incomparable', but might have been
+    // made so accidently for a moment
+    state.units.splice(newValue.length);
+    newValue.forEach((ir, idx) => {
+      Object.assign(state.units[idx], ir);
+    });
   },
   { immediate: true }
 );
@@ -149,48 +153,43 @@ watch(
 /**
  * Exports the IR to the model value
  */
-watch(
-  () => state.units,
-  (newValue) => {
-    // Construct and validate a CustomUnitDefinition[]
-    const errors = [] as string[];
-    const toEmit = state.units.map<CustomUnitDefinition>((ir) => {
-      if (ir.type === "incomparable") return ir.custom;
+watch(state.units, (newValue) => {
+  // Construct and validate a CustomUnitDefinition[]
+  const errors = [] as string[];
+  const toEmit = state.units.map<CustomUnitDefinition>((ir) => {
+    if (ir.type === "incomparable") return ir.custom;
 
-      // Validate, comparable types need valid comparable amount string
-      if (!isNonMetricAmount(ir.custom)) {
-        errors.push(
-          `You specified a custom unit '${ir.custom}', but it doesn't look like a number followed by a string.`
-        );
-        return "INVALID";
-      }
-      if (!isMetricAmount(ir.metric)) {
-        errors.push(
-          `You specified a metric unit '${ir.metric}', but it doesn't look like a number followed by a string.`
-        );
-        return "INVALID";
-      }
-
-      if (ir.type === "comparable-string") return `${ir.custom} = ${ir.metric}`;
-      if (ir.type === "comparable-array") return [ir.custom, ir.metric];
+    // Validate, comparable types need valid comparable amount string
+    if (!isNonMetricAmount(ir.custom)) {
       errors.push(
-        "Something doesn't look right with the custom unit: " +
-          JSON.stringify(ir)
+        `You specified a custom unit '${ir.custom}', but it doesn't look like a number followed by a string.`
       );
       return "INVALID";
-    });
-    // Do nothing if validation failed
-    state.validationErrors = errors;
-    if (errors.length) {
-      return;
     }
-    emit(
-      "update:modelValue",
-      toEmit.length === 0 ? undefined : toEmit.length === 1 ? toEmit[0] : toEmit
+    if (!isMetricAmount(ir.metric)) {
+      errors.push(
+        `You specified a metric unit '${ir.metric}', but it doesn't look like a number followed by a string.`
+      );
+      return "INVALID";
+    }
+
+    if (ir.type === "comparable-string") return `${ir.custom} = ${ir.metric}`;
+    if (ir.type === "comparable-array") return [ir.custom, ir.metric];
+    errors.push(
+      "Something doesn't look right with the custom unit: " + JSON.stringify(ir)
     );
-  },
-  { deep: true }
-);
+    return "INVALID";
+  });
+  // Do nothing if validation failed
+  state.validationErrors = errors;
+  if (errors.length) {
+    return;
+  }
+  emit(
+    "update:modelValue",
+    toEmit.length === 0 ? undefined : toEmit.length === 1 ? toEmit[0] : toEmit
+  );
+});
 
 /**
  * Converts a unit definition from one type to the next, cycling through the list
@@ -201,13 +200,28 @@ watch(
  * @param idx the index of the modelAsList array to be converted
  */
 function convertType(idx: number) {
-  const currentType = state.units[idx].type;
-  state.units[idx].type =
-    currentType === "incomparable"
-      ? "comparable-string"
-      : currentType === "comparable-string"
-      ? "comparable-array"
-      : "incomparable";
+  const current = state.units[idx];
+  if (current.type === "incomparable") {
+    current.type = "comparable-string";
+    // Add a value to the unit, since a comparable amount is useless without one
+    const newCustom = "1 " + current.custom.trim();
+    if (!isNonMetricAmount(current.custom) && isNonMetricAmount(newCustom)) {
+      current.custom = newCustom;
+    }
+    const newMetric = "1 " + (current.metric?.trim() ?? "g");
+    if (!isMetricAmount(current.metric)) {
+      if (isMetricAmount(newMetric)) current.metric = newMetric;
+      else current.metric = "1 g";
+    }
+  } else if (current.type === "comparable-string") {
+    current.type = "comparable-array";
+  } else {
+    current.type = "incomparable";
+    // Remove the value from the unit, as it's meaningless
+    current.custom =
+      current.custom.match(/[0-9]*(\.[0-9]*)? ?(?<unit>.*)/)?.groups?.unit ??
+      current.custom;
+  }
 }
 </script>
 
