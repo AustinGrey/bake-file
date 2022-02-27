@@ -1,5 +1,5 @@
 <template>
-  <textarea></textarea>
+  @todo
 </template>
 
 <script setup lang="ts"></script>

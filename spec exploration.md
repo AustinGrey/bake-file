@@ -77,12 +77,6 @@ A recipe file parser should seek to fail gracefully. Because different parsers m
             - Then this is a multiplier for the entire yield of a recipe (e.g. 1 sandwich)
         - String (format ‘i s’)
           - The amount and unit of the ingredient
-        - Array of exactly size 2
-          - The individual components here can switch order, they should be detected by the type of data they contain, not by the order in which they appear
-            - Decimal or a String with a valid Decimal conversion
-              - The number of units of the ingredient
-            - String which cannot be converted to Decimal
-              - The units of the ingredient
       - `recipe`
         - An explicit indication that the ingredient is in fact a recipe that is defined elsewhere
         - String
@@ -92,7 +86,7 @@ A recipe file parser should seek to fail gracefully. Because different parsers m
     - Alternatives Objects
       - `pick`
         - Integer
-          - The number of items that should be picked from the options
+          - The number of items that should be picked from the options. Optional, the default is 1
       - `options`
         - Array of ingredient definitions
           - The available options to choose from

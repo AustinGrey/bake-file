@@ -1,5 +1,5 @@
 <template>
-  <textarea v-model="modelValue"></textarea>
+  <input type="text" v-model="modelValue" />
 </template>
 
 <script setup lang="ts">

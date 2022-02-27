@@ -106,7 +106,46 @@ export type CustomUnitDefinition =
   | `${NonMetricAmount} = ${MetricAmount}`
   | [NonMetricAmount, MetricAmount];
 
+// Allows an ingredient to be specified as the multiple of the yield of some recipe
+// e.g. 1 egg
+type MultipleOfRecipe = `${number}${"" | " "}${string}`;
+
+// Portions of an ingredient definition common to all alternatives
+interface BaseIngredient {
+  amount?: undefined | number | NonMetricAmount;
+}
+
+// An ingredient specified using the name key, which is mutually exclusive with the recipe key
+interface IngredientByName extends BaseIngredient {
+  name: string;
+}
+
+// An ingredient specified using the recipe key, which is mutually exclusive with the name key
+interface IngredientByRecipe extends BaseIngredient {
+  // Either the name of the recipe to link to, or an inlined recipe nested inside
+  recipe: string | Bakefile;
+}
+
+type Ingredient = IngredientByName | IngredientByRecipe;
+
+interface IngredientSetOfAlternatives {
+  // The number of alternatives that should be picked from the set
+  pick?: number;
+  // At least 1 ingredient, since pick 0 doesn't make sense.
+  options: [Ingredient, ...Ingredient[]];
+}
+
+export type IngredientOptions =
+  | MultipleOfRecipe
+  // Amount and name of an ingredient e.g. 1 cup sugar
+  | `${NonMetricAmount}${"" | " "}${string}`
+  // Name then amount, to support the common list order e.g. sugar 1 cup
+  | `${string}${"" | " "}${NonMetricAmount}`
+  | Ingredient
+  | IngredientSetOfAlternatives;
+
 export interface Bakefile {
   name?: string;
   units?: undefined | CustomUnitDefinition | CustomUnitDefinition[];
+  ingredients?: undefined;
 }
